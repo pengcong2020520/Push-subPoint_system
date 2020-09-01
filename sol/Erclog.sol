@@ -1,43 +1,61 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
-
 import "./IERCLOG.sol";
-
-contract Erclog is IERCLOG {
-
-    mapping(string=>mapping(uint256=>string[])) msglogs;
-    address public owner;
+contract Erclog {
+    mapping(uint8=>address) owners;
+    mapping(address=>bool) isOwnerExist;
     address admin;
-    constructor(address _owner) public {
+    mapping(string=>mapping(uint256=>string[])) msglogs;
+    
+    constructor () public {
         admin = msg.sender;
-        owner = _owner;
     }
     
-    
-    modifier onlyowner() {
-        require(owner == msg.sender || admin == msg.sender, "only owner can do this");
+    modifier onlyadmin() {
+        require(admin == msg.sender, "only admin can do it!");
         _;
     }
-    function updateOwner(address _owner) public onlyowner {
-        owner = _owner;
+    
+    modifier onlyOwner(uint8 ownerid) {
+        require(msg.sender == admin || owners[ownerid] == msg.sender, "only owner can do it");
+        _;
     }
+    
+    function setOwner(uint8 ownerid, address owner) external onlyadmin {
+        require(owners[ownerid] == address(0), "ownerid must be empty!");
+        require(!isOwnerExist[owner], "owner must not be owner!");
+        owners[ownerid] = owner;
+        isOwnerExist[owner] = true; 
+    }
+    
+    
+    function updataOwner(uint8 ownerid, address owner) external onlyOwner(ownerid)  {
+        require(!isOwnerExist[owner], "owner must not be owner");
+        owners[ownerid] = owner;
+        isOwnerExist[owner] = true;
+        isOwnerExist[msg.sender] = false;
+    }  
+    
     function isEqual(string memory a, string memory b) public view returns (bool) {
         bytes32 ha = keccak256(abi.encode(a));
-        bytes32 hb = keccak256(abi.encode(b));
+        bytes32 hb = keccak256(abi.encode(a));
         return ha == hb;
     }
-    function pushLog(string userid, string jsonData, uint256 month) external onlyowner {
-        require(month > 202007, "month must valid");
-        require(!isEqual("", userid), "userid must valid");
+    
+    event PushLog(uint8 _ownerid, string _userid, string _jsonData, uint256 _month);
+    
+    function pushLog(uint8 ownerid, string calldata userid, string calldata jsonData, uint256 month) external onlyOwner(ownerid) {
+        require(month > 202008, "month must be valid!");
+        require(!isEqual(userid, ""), "userid must not be empty! ");
         msglogs[userid][month].push(jsonData);
+        
+        emit PushLog(ownerid, userid, jsonData, month);
     }
-    function queryLog(string userid, uint256 begin, uint256 end) external view returns(string[] memory) {
-        return msglogs[userid][begin];
-    }
-    function queryLogByMongh(string userid, uint256 month) external view returns(string[] memory) {
+    
+    function queryLogByMonth(string calldata userid, uint256 month) external view returns(string[] memory) {
+        require(month > 202008, "month must be valid!");
+        require(!isEqual(userid, ""));
         return msglogs[userid][month];
     }
-    function addr() external view returns (address) {
-        return address(this);
-    }
+    
 }

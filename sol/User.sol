@@ -7,8 +7,8 @@ contract User {
     mapping(uint8=>address) owners;
     mapping(address=>bool) isOwnerExist;
     address admin;
-    constructor(address _admin) public {
-        admin = _admin;
+    constructor() public {
+        admin = msg.sender;
     }
     
 
@@ -44,7 +44,7 @@ contract User {
     }
 
     //true present userid valid; false present userid invalid
-    function useridValid(string calldata userid) external view returns (bool) {
+    function isUseridValid(string calldata userid) external view returns (bool) {
         return !isEqual(Passwds[userid], "");
     }
     

@@ -88,6 +88,59 @@ event Transfer(string from, string to,uint256 value);
 3. 积分的操作情况，均需要通过管理员来进行操控，合理控制了滥用积分，也算对用户积分使用的一个合理监管；
 4. 积分的使用更为透明，灵活，利于开展更多的企业级商业活动。
 
+#### 用户合约
+* **数据结构** 
+定义三个hash表，用来存储用户数据，管理员owner数据以及管理员账户是否存在：
+``` solidity
+ mapping(string=>string) Passwds;
+ mapping(uint8=>address) owners;
+ mapping(address=>bool) isOwnerExist;
+```
+其中hash表`isOwnerExist`主要是用于防止账户重复设置管理员，以及admin授权时出现混乱。
+
+* **功能函数**
+	* 注册功能
+	```solidity
+	function register(string calldata userid, string calldata pass, uint8 ownerid) external returns (bool) ;
+	```
+	* 登录功能
+	```solidity
+	function login(string calldata userid, string calldata pass) external view returns(bool) ;
+	```
+	* 修改密码功能
+	```solidity
+	function setPasswd(string calldata userid, string calldata oldPass, string calldata newPass, uint8 ownerid) external ;
+	```
+    在上述的功能函数中，userid代表的是用户的唯一标识，ownerid代表的是管理员账户id，用户的注册和修改密码功能都需要owner的参与，owner作为用户的服务者且也是用户账户的管理者。通过区块链的方式，使得owner并不能直接找到账户的密码，同时用户可以通过事件订阅来监督owner的操作是否符合自己的预期，透明性的增加让用户有着极佳的使用体验。所以需要定义一个owner操作日志事件。
+	* owner操作日志事件
+	```solidity
+	event Owneruserlog(string userid, uint8 ownerid, string _type);
+	```
+
+#### 日志合约
+日志合约方面主要用来推送和上传用户的积分操作日志
+* 上传日志函数功能
+```solidity
+function pushLog(uint8 ownerid, string calldata userid, string calldata jsonData, uint256 month) external;
+```
+在设计中，采用按月存储的方式，简化存储在区块链上资源的数量，有效缩小了区块链存储的压力
+
+* 查询日志功能
+```solidity
+ function queryLog(uint8 ownerid, string calldata userid, uint256 begin, uint256 end) external view returns(string[] memory);
+```
+这里的设计也是按月查询，如果需要具体化到查询的时间，最好可以通过后端进行一些简单的处理即可，保持合约的简洁性。
+
+#### 总控合约
+总控合约主要负责用一个admin账户来控制owner的权限，有利于分级化管理。
+* 设置owner功能的实现函数
+```
+function setOwner(uint8 itype, uint8 ownerid, address owner) external onlyadmin ;
+```
+只需要通过一个类别编号，就可以轻松用一个函数来操控多个模块合约。
+
+* 更新owner功能的实现
+更新owner不仅仅可以通过admin操作
 
 
 

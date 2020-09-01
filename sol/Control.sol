@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+﻿pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 import "./Erclog.sol";
@@ -6,52 +6,69 @@ import "./Erc200.sol";
 import "./User.sol";
 
 contract Control {
-    address owner;
+    address admin;
     User user;
     Erc200 token;
     Erclog erclog;
-    constructor(address _onwer, string memory sym) public {
-        owner = _onwer;
-        user = new User(_onwer);
-        token = new Erc200(sym, _onwer);
-        erclog = new Erclog(owner);
-
+    constructor(string _admin, string memory sym) public {
+        admin = _admin;
+        user = new User();
+        token = new Erc200(sym);
+        erclog = new Erclog();
     }
     
     function useridValid(string userid) external view returns (bool) {
-        return user.useridValid(userid);
+        return user.isUseridValid(userid);
     }
     
-    modifier onlyowner() {
-        require(owner == msg.sender, "only owner can do this");
+    modifier onlyadmin() {
+        require(admin == msg.sender, "only owner can do this");
         _;
     }
     
-    function updateOwner(address _onwer) onlyowner public {
-        owner = _onwer;
-        user.updateOwner(_onwer);
-        token.updateOwner(_onwer);
-        erclog.updateOwner(_onwer);
+    modifier onlyUserOwner(string ownerid) {
+        require(user.checkid(ownerid) == msg.sender || admin == msg.sender, "userid must be owner to this");
+        _;
     }
-    
-    function upgradeUser(address useraddr) external onlyowner {
-        user = User(useraddr);
+    modifier onlyErc200Owner(string ownerid) {
+        require(token.checkid(ownerid) == msg.sender || admin == msg.sender, "userid must be owner to this");
+        _;
     }
-    
-    function upgradeErc200(address ercaddr) external onlyowner {
-        token = Erc200(ercaddr);
+    modifier onlyErclogOwner(string ownerid) {
+        require(erclog.checkid(ownerid) == msg.sender || admin == msg.sender, "userid must be owner to this");
+        _;
+    }    
+    //设置 user owner log 的 owner
+    function setOwner(uint8 itype, uint8 ownerid, address owner) external view returns (address) {
+        if(itype == 1) {
+            return user.setOwner(ownerid, owner);
+        }
+        if(itype == 2) {
+            return erc200.setOwner(ownerid, owner);
+        }
+        if(itype == 3) {
+            return erclog.setOwner(ownerid, owner);
+        }
     }
-    
-    function upgradeErclog(address logaddr) external onlyowner {
-        erclog = Erclog(logaddr);
+    // change owner 
+    function updateOwner(uint8 itype, uint8 ownerid, address owner) onlyowner public {
+        if(itype == 1) {
+            return user.updateOwner(ownerid, owner);
+        }
+        if(itype == 2) {
+            return erc200.updateOwner(ownerid, owner);
+        }
+        if(itype == 3) {
+            return erclog.updateOwner(ownerid, owner);
+        }
     }
     
     //user - call
-    function register(string userid, string pass) external {
+    function register(string userid, string pass) external onlyUserOwner(ownerid) {
         user.register(userid, pass);
     }
     
-    function setPasswd(string userid, string oldPass, string newPass) external {
+    function setPasswd(string userid, string oldPass, string newPass) external onlyUserOwner(ownerid) {
         user.setPasswd(userid, oldPass, newPass);
     }
     
@@ -68,19 +85,20 @@ contract Control {
 	    return token.balanceOf(who);
 	}
 	// 转账
-	function transfer(string owner, string to, uint256 value) external  returns (bool) {
+	function transfer(string owner, string to, uint256 value) external onlyErc200Owner(ownerid) returns (bool) {
 	    token.transfer(owner, to, value);
 	}
-	// 转账
-	function mint(string to, uint256 value) external returns (bool) {
+	// 挖矿 
+	function mint(string to, uint256 value) external onlyErc200Owner(ownerid) returns (bool) {
 	    token.mint(to, value);
 	}
+	// 销毁 
+	function burn(string to, uint256 value) external onlyErc200Owner(ownerid) returns (bool) {
+	    token.burn(to, value);
+	}
     //log - call 
-    function pushLog(string userid, string jsonData, uint256 month) external  {
+    function pushLog(string userid, string jsonData, uint256 month) external onlyErclogOwner(ownerid) {
         erclog.pushLog(userid, jsonData, month);
-    }
-    function queryLog(string userid, uint256 begin, uint256 end) external view returns(string[] memory) {
-        return erclog.queryLog(userid, begin, end);
     }
     function queryLogByMongh(string userid, uint256 month) external view returns(string[] memory) {
         return erclog.queryLogByMongh(userid, month);
