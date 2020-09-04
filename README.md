@@ -140,7 +140,39 @@ function setOwner(uint8 itype, uint8 ownerid, address owner) external onlyadmin 
 只需要通过一个类别编号，就可以轻松用一个函数来操控多个模块合约。
 
 * 更新owner功能的实现
-更新owner不仅仅可以通过admin操作
+更新owner可以通过原owner本人操作，也可以由admin进行操作，符合分级管理的习惯。
+```solidity
+function updateOwner(uint8 itype, uint8 ownerid, address owner) public;
+```
+与设置owner基本类似
+* 调用其他合约的功能模块以及调用其他合约查看信息
+```solidity
+function register(string userid, string pass) external onlyUserOwner(ownerid)；
+function setPasswd(string userid, string oldPass, string newPass) external onlyUserOwner(ownerid)；
+function login(string userid, string pass) external view returns (bool)；
+```
+用户登录注册以及修改密码功能:
+登录是通过调用user合约进行数据匹配查看；
+注册和修改密码功能需要管理员权限进行。
+```solidity
+	// 转账
+	function transfer(string owner, string to, uint256 value) external onlyErc200Owner(ownerid) returns (bool);
+	// 挖矿 
+	function mint(string to, uint256 value) external onlyErc200Owner(ownerid) returns (bool);
+	// 销毁 
+	function burn(string to, uint256 value) external onlyErc200Owner(ownerid) returns (bool);
+```
+积分的转移，消费或或者充值功能。
+
+总控合约主要负责与用户端的交互，获取用户的需求，然后调用相应的合约进行数据的CRUD。
+
+
+
+
+
+
+
+
 
 
 
